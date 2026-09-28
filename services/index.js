@@ -98,7 +98,7 @@ export const reportService = {
   csv: async (type, params) => (await http.get(`/reports/${type}`, { params: clean({ ...params, format: "csv" }), responseType: "blob" })).data,
 };
 
-export const dashboardService = { company: () => get("/dashboard/company") };
+export const dashboardService = { company: () => get("/dashboard/company"), menuCounts: () => get("/dashboard/menu-counts") };
 export const notificationService = {
   list: (params) => get("/notifications", params),
   read: (id) => post(`/notifications/${id}/read`),

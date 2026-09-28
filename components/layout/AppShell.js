@@ -2,6 +2,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { dashboardService } from "@/services";
 import { Download, LogOut, MoreHorizontal, PanelLeftClose, PanelLeftOpen, ScanFace, WifiOff } from "lucide-react";
 import { useAuthStore, hasPermission } from "@/stores/authStore";
 import { useUiStore } from "@/stores/uiStore";
@@ -19,16 +21,26 @@ const isActive = (pathname, item) => (item.exact ? pathname === item.href : path
 const SLIDE = "transition-[width,padding] duration-300 ease-in-out motion-reduce:transition-none";
 const FADE = "transition-opacity duration-200 ease-in-out motion-reduce:transition-none";
 
-function NavList({ items, pathname, collapsed, onNavigate }) {
+const compact = (n) => (n > 999 ? `${Math.floor(n / 100) / 10}k` : String(n));
+
+function NavList({ items, pathname, collapsed, onNavigate, counts }) {
   return (
     <nav aria-label="Main" className="space-y-1 p-3">
       {items.map((item) => {
         const active = isActive(pathname, item);
+        const n = item.count ? counts?.[item.count] : undefined;
+        const has = typeof n === "number";
+        const meaning = has ? `${n} ${item.countLabel}` : undefined;
         return (
-          <Link key={item.href} href={item.href} onClick={onNavigate} aria-current={active ? "page" : undefined} title={collapsed ? item.label : undefined}
+          <Link key={item.href} href={item.href} onClick={onNavigate} aria-current={active ? "page" : undefined} title={collapsed ? [item.label, meaning].filter(Boolean).join(" · ") : meaning}
             className={cn("flex min-h-12 items-center overflow-hidden whitespace-nowrap rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors lg:min-h-0 lg:rounded-lg", active ? "bg-brand-50 text-brand-700" : "text-muted hover:bg-slate-100 hover:text-ink active:bg-slate-200")}>
-            <item.icon className="size-5 shrink-0" aria-hidden />
-            <span className={cn(FADE, "pl-3", collapsed && "opacity-0")}>{item.label}</span>
+            <span className="relative shrink-0">
+              <item.icon className="size-5" aria-hidden />
+              {has && n > 0 && <span aria-hidden className={cn(FADE, "absolute -right-2 -top-2 grid h-4 min-w-4 place-items-center rounded-full bg-brand-600 px-1 text-[10px] font-semibold leading-none text-white", !collapsed && "opacity-0")}>{compact(n)}</span>}
+            </span>
+            <span className={cn(FADE, "min-w-0 flex-1 truncate pl-3", collapsed && "opacity-0")}>{item.label}</span>
+            {has && <span aria-hidden className={cn(FADE, "ml-2 shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums", active ? "bg-brand-100 text-brand-700" : "bg-slate-100 text-slate-600", collapsed && "opacity-0")}>{compact(n)}</span>}
+            {has && <span className="sr-only">, {meaning}</span>}
           </Link>
         );
       })}
@@ -95,6 +107,7 @@ export function AppShell({ nav, children, tabs = [] }) {
   const user = useAuthStore((s) => s.user);
   const { sidebarCollapsed, toggleSidebar, mobileNavOpen, setMobileNav } = useUiStore();
   const online = useOnline();
+  const counts = useQuery({ queryKey: ["menu-counts"], queryFn: dashboardService.menuCounts, refetchInterval: 60_000, refetchOnWindowFocus: true }).data?.data;
   const items = nav.filter((i) => !i.permission || hasPermission(user, i.permission));
   const tabItems = tabs.map((href) => items.find((i) => i.href === href)).filter(Boolean);
   const hasTabs = tabItems.length > 0;
@@ -103,7 +116,7 @@ export function AppShell({ nav, children, tabs = [] }) {
     <div className="min-h-dvh">
       <aside className={cn("fixed inset-y-0 left-0 z-20 hidden flex-col border-r border-line bg-surface lg:flex", SLIDE, sidebarCollapsed ? "w-[72px]" : "w-64")}>
         <Brand collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
-        <div className="flex-1 overflow-y-auto overflow-x-hidden"><NavList items={items} pathname={pathname} collapsed={sidebarCollapsed} /></div>
+        <div className="flex-1 overflow-y-auto overflow-x-hidden"><NavList items={items} pathname={pathname} collapsed={sidebarCollapsed} counts={counts} /></div>
         <SidebarFooter collapsed={sidebarCollapsed} />
       </aside>
 
@@ -114,7 +127,7 @@ export function AppShell({ nav, children, tabs = [] }) {
             <CompanyLogo company={user?.company ?? { name: "AMS" }} size="size-9" />
             <span className="truncate font-semibold">{user?.company?.name ?? "Platform admin"}</span>
           </div>
-          <div className="flex-1"><NavList items={items} pathname={pathname} onNavigate={() => setMobileNav(false)} /></div>
+          <div className="flex-1"><NavList items={items} pathname={pathname} counts={counts} onNavigate={() => setMobileNav(false)} /></div>
           <SidebarFooter />
         </div>
       </Drawer>
@@ -131,7 +144,10 @@ export function AppShell({ nav, children, tabs = [] }) {
             return (
               <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined}
                 className={cn("flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-xl text-[11px] font-medium transition-colors active:bg-slate-100", active ? "text-brand-700" : "text-muted")}>
-                <span className={cn("grid h-7 w-12 place-items-center rounded-full transition-colors", active && "bg-brand-50")}><item.icon className="size-5" aria-hidden /></span>
+                <span className={cn("relative grid h-7 w-12 place-items-center rounded-full transition-colors", active && "bg-brand-50")}>
+                  <item.icon className="size-5" aria-hidden />
+                  {item.count && counts?.[item.count] > 0 && <span className="absolute -top-1 right-0 grid h-4 min-w-4 place-items-center rounded-full bg-brand-600 px-1 text-[10px] font-semibold leading-none text-white">{compact(counts[item.count])}<span className="sr-only"> {item.countLabel}</span></span>}
+                </span>
                 {item.label.split(" ")[0]}
               </Link>
             );
