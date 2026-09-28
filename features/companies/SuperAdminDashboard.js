@@ -2,13 +2,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { Building2, CheckCircle2, FlaskConical, PauseCircle, Users, Activity } from "lucide-react";
 import { companyService } from "@/services";
+import { RunJobsButton } from "@/features/jobs/RunJobs";
 import { PageHeader, QueryBoundary, StatCard } from "@/components/ui";
 
 export function SuperAdminDashboard() {
   const q = useQuery({ queryKey: ["platform", "stats"], queryFn: companyService.stats, refetchInterval: 60_000 });
   return (
     <>
-      <PageHeader title="Platform overview" description="SaaS-level metrics across all tenants." />
+      <PageHeader title="Platform overview" description="SaaS-level metrics across all tenants." actions={<RunJobsButton />} />
       <QueryBoundary query={q}>
         {({ data: d }) => (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

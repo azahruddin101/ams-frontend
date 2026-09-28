@@ -99,6 +99,7 @@ export const reportService = {
 };
 
 export const dashboardService = { company: () => get("/dashboard/company"), menuCounts: () => get("/dashboard/menu-counts") };
+export const jobService = { status: () => get("/jobs"), run: (body) => post("/jobs/run", body, { timeout: 300_000 }) }; // catching up many days takes a while
 export const notificationService = {
   list: (params) => get("/notifications", params),
   read: (id) => post(`/notifications/${id}/read`),

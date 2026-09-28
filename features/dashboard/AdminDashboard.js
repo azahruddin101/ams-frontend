@@ -9,6 +9,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useNow } from "@/hooks/useNow";
 import { formatMinutes, formatDate } from "@/lib/utils";
 import { SetupCard } from "./SetupCard";
+import { RunJobsButton } from "@/features/jobs/RunJobs";
 import { InstallBanner } from "@/features/pwa/InstallApp";
 
 /** Minimal accessible SVG bars: present vs late per day. */
@@ -102,6 +103,7 @@ export function AdminDashboard() {
       {company && q.data && <Hero company={company} todayKey={q.data.data.date} present={q.data.data.presentToday} total={q.data.data.totalEmployees} />}
       {company && !q.data && <Hero company={company} todayKey={new Date().toISOString().slice(0, 10)} present={0} total={null} />}
       <div className="mb-6"><SetupCard /></div>
+      <div className="mb-4 flex justify-end"><RunJobsButton /></div>
       <QueryBoundary query={q}>
         {({ data: d }) => (
           <div className="space-y-6">
